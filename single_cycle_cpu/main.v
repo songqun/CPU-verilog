@@ -1,0 +1,47 @@
+`timescale 1ns / 1ps
+module main(clk, reset);
+	input clk, reset;
+	parameter four=4;
+	wire [31:0]pcIn;
+	wire [31:0]pcOut;
+	wire [31:0]addOut;
+	wire [31:0]instruction;
+	wire regDst, jump, memRead, memtoReg, memWrite, ALUSrc, regWrite, beq, bne;
+	wire [2:0] ALUOp;
+	wire [4:0]mux5ToReg;
+	wire [31:0]mux32ToReg;
+	wire [31:0]readData1;
+	wire [31:0]readData2;
+	wire [31:0]extend;
+	wire [31:0]addIn;
+	wire [27:0]jumpExtend;
+	wire [31:0]jumpAddress;
+	wire [31:0]addRst;
+	wire [3:0]ALUcontrol;
+	wire [31:0]mux32ToALU;
+	wire zero;
+	wire [31:0]ALURst;
+	wire [31:0]readMemoryData;
+	wire branchTomux32;
+	wire [31:0]mux32Tomux32;
+	
+	pc pc1(clk, reset, pcIn, pcOut);
+	add add1(pcOut, four, addOut);
+	instrMemory instrMemory1(pcOut, instruction);
+	control control1(instruction[31:26], regDst, jump, memRead, memtoReg, ALUOp, memWrite, ALUSrc, regWrite, beq, bne);
+	mux5 mux51(instruction[20:16], instruction[15:11], regDst, mux5ToReg);
+	registers registers1(instruction[25:21], instruction[20:16], mux5ToReg, mux32ToReg, readData1, readData2, regWrite, clk);
+	signExtend signExtend1(instruction[15:0], extend);
+	shiftLeft2 shiftLeft21(extend, addIn);
+	shiftLeft226 shiftLeft2261(instruction[25:0], jumpExtend);
+	assign jumpAddress={addOut[31:28], jumpExtend};
+	add add2(addOut, addIn, addRst);
+	ALUcontrol ALUcontrol1(instruction[5:0], ALUOp, ALUcontrol);
+	mux32 mux321(readData2, extend[31:0], ALUSrc, mux32ToALU);
+	ALU ALU1(readData1, mux32ToALU, ALUcontrol, zero, ALURst);
+	dataMemory dataMemory1(ALURst, readData2, memWrite, memRead, readMemoryData, clk);
+	branch branch1(beq, bne, zero, branchTomux32);
+	mux32 mux322(ALURst, readMemoryData, memtoReg, mux32ToReg);
+	mux32 mux323(addOut, addRst, branchTomux32, mux32Tomux32);
+	mux32 mux324(mux32Tomux32, jumpAddress, jump, pcIn);
+endmodule
